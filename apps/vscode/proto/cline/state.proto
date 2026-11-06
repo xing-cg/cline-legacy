@@ -291,6 +291,12 @@ message Settings {
   optional OpenRouterModelInfo plan_mode_vertex_custom_model_info = 185;
   optional bool act_mode_vertex_custom_model_selected = 186;
   optional OpenRouterModelInfo act_mode_vertex_custom_model_info = 187;
+  optional OpenRouterModelInfo plan_mode_anthropic_model_info = 188;
+  optional string plan_mode_cline_pass_model_id = 189;
+  optional OpenRouterModelInfo plan_mode_cline_pass_model_info = 190;
+  optional OpenRouterModelInfo act_mode_anthropic_model_info = 191;
+  optional string act_mode_cline_pass_model_id = 192;
+  optional OpenRouterModelInfo act_mode_cline_pass_model_info = 193;
 }
 
 message State {

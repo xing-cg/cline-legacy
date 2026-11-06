@@ -41,6 +41,8 @@ import { workspaceResolver } from "./core/workspace"
 import { findMatchingNotebookCell, getContextForCommand, showWebview } from "./hosts/vscode/commandUtils"
 import { abortCommitGeneration, generateCommitMsg } from "./hosts/vscode/commit-message-generator"
 import { registerClineOutputChannel } from "./hosts/vscode/hostbridge/env/debugLog"
+import { registerConnectionPanel } from "./hosts/vscode/legacy/ConnectionPanel"
+import { ConnectionProfileStore } from "./hosts/vscode/legacy/connection-profiles"
 import {
 	disposeVscodeCommentReviewController,
 	getVscodeCommentReviewController,
@@ -86,6 +88,18 @@ export async function activate(context: vscode.ExtensionContext) {
 	// 4. Register services and perform common initialization
 	// IMPORTANT: Must be done after host provider is setup and migrations are complete
 	const webview = (await initialize(storageContext)) as VscodeWebviewProvider
+	// This VS Code-only feature keeps inactive profile keys in native SecretStorage,
+	// rather than the cross-platform Cline settings file. Only the active key is
+	// copied into Cline's existing provider configuration when the user applies it.
+	const profileStoreKey = "cline.legacy.connectionProfiles.v1"
+	const profileSecretPrefix = "cline.legacy.connectionProfile."
+	registerConnectionPanel(context, webview.controller, new ConnectionProfileStore({
+		get: () => context.globalState.get(profileStoreKey),
+		update: (profiles) => context.globalState.update(profileStoreKey, profiles),
+		getSecret: (id) => context.secrets.get(profileSecretPrefix + id),
+		storeSecret: (id, key) => context.secrets.store(profileSecretPrefix + id, key),
+		deleteSecret: (id) => context.secrets.delete(profileSecretPrefix + id),
+	}))
 
 	// 5. Register services and commands specific to VS Code
 	// Initialize test mode and add disposables to context

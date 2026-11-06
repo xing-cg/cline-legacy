@@ -91,6 +91,7 @@ function createHandlerForProvider(
 				onRetryAttempt: options.onRetryAttempt,
 				apiKey: options.apiKey,
 				anthropicBaseUrl: options.anthropicBaseUrl,
+				anthropicModelInfo: mode === "plan" ? options.planModeAnthropicModelInfo : options.actModeAnthropicModelInfo,
 				apiModelId: mode === "plan" ? options.planModeApiModelId : options.actModeApiModelId,
 				reasoningEffort: mode === "plan" ? options.planModeReasoningEffort : options.actModeReasoningEffort,
 				thinkingBudgetTokens:
@@ -506,6 +507,7 @@ function createHandlerForProvider(
 				onRetryAttempt: options.onRetryAttempt,
 				apiKey: options.apiKey,
 				anthropicBaseUrl: options.anthropicBaseUrl,
+				anthropicModelInfo: mode === "plan" ? options.planModeAnthropicModelInfo : options.actModeAnthropicModelInfo,
 				apiModelId: mode === "plan" ? options.planModeApiModelId : options.actModeApiModelId,
 				reasoningEffort: mode === "plan" ? options.planModeReasoningEffort : options.actModeReasoningEffort,
 				thinkingBudgetTokens:

@@ -44,6 +44,7 @@ function toProtobufThinkingConfig(appConfig: ModelInfo["thinkingConfig"] | undef
  */
 export function fromProtobufModelInfo(protoInfo: OpenRouterModelInfo): ModelInfo {
 	return {
+		supportsTools: protoInfo.supportsTools,
 		maxTokens: protoInfo.maxTokens,
 		contextWindow: protoInfo.contextWindow,
 		supportsImages: protoInfo.supportsImages,
@@ -70,6 +71,7 @@ export function toProtobufModelInfo(modelInfo: ModelInfo): OpenRouterModelInfo {
 		supportsImages: modelInfo.supportsImages,
 		supportsPromptCache: modelInfo.supportsPromptCache,
 		supportsReasoning: modelInfo.supportsReasoning,
+		supportsTools: modelInfo.supportsTools,
 		inputPrice: modelInfo.inputPrice,
 		outputPrice: modelInfo.outputPrice,
 		cacheWritesPrice: modelInfo.cacheWritesPrice,
@@ -100,6 +102,12 @@ export function fromProtobufOpenAiCompatibleModelInfo(protoInfo: ProtoOpenAiComp
 		tiers: protoInfo.tiers.length > 0 ? protoInfo.tiers : undefined,
 		temperature: protoInfo.temperature,
 		isR1FormatRequired: protoInfo.isR1FormatRequired,
+		supportsTools: protoInfo.supportsTools,
+		supportsStreaming: protoInfo.supportsStreaming,
+		supportsReasoning: protoInfo.supportsReasoning,
+		supportsReasoningEffort: protoInfo.supportsReasoningEffort,
+		systemRole: protoInfo.systemRole === "system" || protoInfo.systemRole === "developer" ? protoInfo.systemRole : undefined,
+		apiFormat: protoInfo.apiFormat,
 	}
 }
 

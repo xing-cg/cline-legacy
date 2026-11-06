@@ -1,16 +1,15 @@
 import { TooltipContent, TooltipTrigger } from "@radix-ui/react-tooltip"
 import { azureOpenAiDefaultApiVersion, openAiModelInfoSaneDefaults } from "@shared/api"
-import { OpenAiModelsRequest } from "@shared/proto/cline/models"
 import { Mode } from "@shared/storage/types"
 import { VSCodeButton, VSCodeCheckbox } from "@vscode/webview-ui-toolkit/react"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useState } from "react"
 import { Tooltip } from "@/components/ui/tooltip"
 import { useExtensionState } from "@/context/ExtensionStateContext"
-import { ModelsServiceClient } from "@/services/grpc-client"
 import { getAsVar, VSC_DESCRIPTION_FOREGROUND } from "@/utils/vscStyles"
 import { ApiKeyField } from "../common/ApiKeyField"
 import { BaseUrlField } from "../common/BaseUrlField"
 import { DebouncedTextField } from "../common/DebouncedTextField"
+import { ModelDiscovery } from "../common/ModelDiscovery"
 import { ModelInfoView } from "../common/ModelInfoView"
 import ReasoningEffortSelector from "../ReasoningEffortSelector"
 import { parsePrice } from "../utils/pricingUtils"
@@ -42,36 +41,6 @@ export const OpenAICompatibleProvider = ({ showModelOptions, isPopup, currentMod
 	// Get mode-specific fields
 	const { openAiModelInfo } = getModeSpecificFields(apiConfiguration, currentMode)
 
-	// Debounced function to refresh OpenAI models (prevents excessive API calls while typing)
-	const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
-
-	useEffect(() => {
-		return () => {
-			if (debounceTimerRef.current) {
-				clearTimeout(debounceTimerRef.current)
-			}
-		}
-	}, [])
-
-	const debouncedRefreshOpenAiModels = useCallback((baseUrl?: string, apiKey?: string) => {
-		if (debounceTimerRef.current) {
-			clearTimeout(debounceTimerRef.current)
-		}
-
-		if (baseUrl && apiKey) {
-			debounceTimerRef.current = setTimeout(() => {
-				ModelsServiceClient.refreshOpenAiModels(
-					OpenAiModelsRequest.create({
-						baseUrl,
-						apiKey,
-					}),
-				).catch((error) => {
-					console.error("Failed to refresh OpenAI models:", error)
-				})
-			}, 500)
-		}
-	}, [])
-
 	return (
 		<div>
 			<Tooltip>
@@ -88,7 +57,6 @@ export const OpenAICompatibleProvider = ({ showModelOptions, isPopup, currentMod
 							initialValue={apiConfiguration?.openAiBaseUrl || ""}
 							onChange={(value) => {
 								handleFieldChange("openAiBaseUrl", value)
-								debouncedRefreshOpenAiModels(value, apiConfiguration?.openAiApiKey)
 							}}
 							placeholder={"Enter base URL..."}
 							style={{ width: "100%", marginBottom: 10 }}
@@ -105,9 +73,18 @@ export const OpenAICompatibleProvider = ({ showModelOptions, isPopup, currentMod
 				initialValue={apiConfiguration?.openAiApiKey || ""}
 				onChange={(value) => {
 					handleFieldChange("openAiApiKey", value)
-					debouncedRefreshOpenAiModels(apiConfiguration?.openAiBaseUrl, value)
 				}}
 				providerName="OpenAI Compatible"
+			/>
+
+			<ModelDiscovery
+				apiKey={apiConfiguration?.openAiApiKey}
+				baseUrl={apiConfiguration?.openAiBaseUrl}
+				headers={apiConfiguration?.openAiHeaders}
+				onSelect={(value) =>
+					handleModeFieldChange({ plan: "planModeOpenAiModelId", act: "actModeOpenAiModelId" }, value, currentMode)
+				}
+				selectedModelId={selectedModelId}
 			/>
 
 			<DebouncedTextField

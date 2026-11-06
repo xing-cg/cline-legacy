@@ -49,6 +49,9 @@ export async function updateApiConfigurationProto(
 
 			// Convert ModelInfo objects (empty arrays → undefined)
 			// Plan Mode
+			planModeAnthropicModelInfo: protoApiConfiguration.planModeAnthropicModelInfo
+				? fromProtobufModelInfo(protoApiConfiguration.planModeAnthropicModelInfo)
+				: undefined,
 			planModeOpenRouterModelInfo:
 				protoApiConfiguration.planModeOpenRouterModelInfo
 					? fromProtobufModelInfo(
@@ -117,6 +120,9 @@ export async function updateApiConfigurationProto(
 					: undefined,
 
 			// Act Mode
+			actModeAnthropicModelInfo: protoApiConfiguration.actModeAnthropicModelInfo
+				? fromProtobufModelInfo(protoApiConfiguration.actModeAnthropicModelInfo)
+				: undefined,
 			actModeOpenRouterModelInfo:
 				protoApiConfiguration.actModeOpenRouterModelInfo
 					? fromProtobufModelInfo(

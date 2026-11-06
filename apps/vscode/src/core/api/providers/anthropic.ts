@@ -8,10 +8,10 @@ import type { MessageCreateParamsStreaming as AnthropicMessageCreateParamsStream
 import { Stream as AnthropicStream } from "@anthropic-ai/sdk/streaming"
 import {
 	ANTHROPIC_FAST_MODE_SUFFIX,
-	AnthropicModelId,
 	anthropicDefaultModelId,
 	anthropicModels,
 	CLAUDE_SONNET_1M_SUFFIX,
+	getAnthropicModelInfo,
 	ModelInfo,
 } from "@shared/api"
 import { isClaudeOpusAdaptiveThinkingModel, resolveClaudeOpusAdaptiveThinking } from "@shared/utils/reasoning-support"
@@ -22,13 +22,26 @@ import { ApiHandler, CommonApiHandlerOptions } from "../index"
 import { withRetry } from "../retry"
 import { sanitizeAnthropicMessages } from "../transform/anthropic-format"
 import { ApiStream } from "../transform/stream"
+import { createWithSonnet55Compatibility } from "./anthropic-sonnet55"
 
 export const ANTHROPIC_FAST_MODE_BETA = "fast-mode-2026-02-01"
+
+export function normalizeAnthropicBaseUrl(value?: string): string | undefined {
+	if (!value?.trim()) {
+		return undefined;
+	}
+	const url = new URL(value.trim());
+	// The SDK appends /v1/messages itself. Accept the /v1 URL commonly copied
+	// from gateway dashboards without producing /v1/v1/messages.
+	url.pathname = url.pathname.replace(/\/+$/, "").replace(/\/v1$/, "") || "/";
+	return url.toString().replace(/\/$/, "");
+}
 
 interface AnthropicHandlerOptions extends CommonApiHandlerOptions {
 	apiKey?: string
 	anthropicBaseUrl?: string
 	apiModelId?: string
+	anthropicModelInfo?: ModelInfo
 	reasoningEffort?: string
 	thinkingBudgetTokens?: number
 }
@@ -49,7 +62,7 @@ export class AnthropicHandler implements ApiHandler {
 			try {
 				this.client = new Anthropic({
 					apiKey: this.options.apiKey,
-					baseURL: this.options.anthropicBaseUrl || undefined,
+					baseURL: normalizeAnthropicBaseUrl(this.options.anthropicBaseUrl),
 					defaultHeaders: buildExternalBasicHeaders(),
 					fetch, // Use configured fetch with proxy support
 				})
@@ -67,12 +80,15 @@ export class AnthropicHandler implements ApiHandler {
 		const model = this.getModel()
 		let stream: AnthropicStream<Anthropic.RawMessageStreamEvent> | AsyncIterable<BetaRawMessageStreamEvent>
 
-		const useFastMode = model.id.endsWith(ANTHROPIC_FAST_MODE_SUFFIX)
+		const builtInModel = Object.hasOwn(anthropicModels, model.id)
+		const useFastMode = builtInModel && model.id.endsWith(ANTHROPIC_FAST_MODE_SUFFIX)
 		const baseModelId = useFastMode ? model.id.slice(0, -ANTHROPIC_FAST_MODE_SUFFIX.length) : model.id
-		const modelId = baseModelId.endsWith(CLAUDE_SONNET_1M_SUFFIX)
+		const modelId = builtInModel && baseModelId.endsWith(CLAUDE_SONNET_1M_SUFFIX)
 			? baseModelId.slice(0, -CLAUDE_SONNET_1M_SUFFIX.length)
 			: baseModelId
-		const enable1mContextWindow = baseModelId.endsWith(CLAUDE_SONNET_1M_SUFFIX)
+		const enable1mContextWindow = builtInModel && baseModelId.endsWith(CLAUDE_SONNET_1M_SUFFIX)
+		const createStandardMessage = (body: AnthropicMessageCreateParamsStreaming, options?: { headers: Record<string, string> }) =>
+			createWithSonnet55Compatibility(body, this.options.reasoningEffort, (request) => client.messages.create(request, options))
 		const fastModeBetas = enable1mContextWindow
 			? [ANTHROPIC_FAST_MODE_BETA, "context-1m-2025-08-07"]
 			: [ANTHROPIC_FAST_MODE_BETA]
@@ -145,7 +161,7 @@ export class AnthropicHandler implements ApiHandler {
 
 			stream = useFastMode
 				? await createFastModeMessage(requestBody)
-				: await client.messages.create(
+				: await createStandardMessage(
 						requestBody,
 						(() => {
 							// 1m context window beta header
@@ -175,7 +191,7 @@ export class AnthropicHandler implements ApiHandler {
 				requestBody.output_config = outputConfig
 			}
 
-			stream = useFastMode ? await createFastModeMessage(requestBody) : await client.messages.create(requestBody)
+			stream = useFastMode ? await createFastModeMessage(requestBody) : await createStandardMessage(requestBody)
 		}
 
 		const lastStartedToolCall = { id: "", name: "", arguments: "" }
@@ -302,15 +318,11 @@ export class AnthropicHandler implements ApiHandler {
 		}
 	}
 
-	getModel(): { id: AnthropicModelId; info: ModelInfo } {
-		const modelId = this.options.apiModelId
-		if (modelId && modelId in anthropicModels) {
-			const id = modelId as AnthropicModelId
-			return { id, info: anthropicModels[id] }
-		}
+	getModel(): { id: string; info: ModelInfo } {
+		const modelId = this.options.apiModelId?.trim() || anthropicDefaultModelId
 		return {
-			id: anthropicDefaultModelId,
-			info: anthropicModels[anthropicDefaultModelId],
+			id: modelId,
+			info: getAnthropicModelInfo(modelId, this.options.anthropicModelInfo),
 		}
 	}
 }

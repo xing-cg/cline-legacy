@@ -69,6 +69,7 @@ export interface ModelInfo {
 	supportsImages?: boolean
 	supportsPromptCache: boolean // this value is hardcoded for now
 	supportsReasoning?: boolean // Whether the model supports reasoning/thinking mode
+	supportsTools?: boolean // Explicit native tool capability; undefined keeps model-family detection
 	inputPrice?: number // Keep for non-tiered input models
 	outputPrice?: number // Keep for non-tiered output models
 	thinkingConfig?: {
@@ -98,7 +99,6 @@ export interface OpenAiCompatibleModelInfo extends ModelInfo {
 	isR1FormatRequired?: boolean
 	systemRole?: "developer" | "system"
 	supportsReasoningEffort?: boolean
-	supportsTools?: boolean
 	supportsStreaming?: boolean
 }
 
@@ -184,6 +184,14 @@ export const anthropicDefaultModelId: AnthropicModelId = "claude-sonnet-5"
 export const ANTHROPIC_MIN_THINKING_BUDGET = 1_024
 export const ANTHROPIC_MAX_THINKING_BUDGET = 6_000
 export const anthropicModels = {
+	"claude-sonnet-5-5": {
+		maxTokens: 128_000,
+		contextWindow: 1_000_000,
+		supportsImages: true,
+		supportsPromptCache: true,
+		supportsReasoning: true,
+		description: "Sonnet 5.5 compatibility preset. Verify limits and configure prices with your API provider.",
+	},
 	"claude-sonnet-5": {
 		maxTokens: 128_000,
 		contextWindow: 200_000,
@@ -515,6 +523,39 @@ export const anthropicModels = {
 		cacheReadsPrice: 0.03,
 	},
 } as const satisfies Record<string, ModelInfo> // as const assertion makes the object deeply readonly
+
+export const anthropicCustomModelInfoDefaults: ModelInfo = {
+	maxTokens: 8192,
+	contextWindow: 128_000,
+	supportsImages: false,
+	supportsPromptCache: false,
+	supportsReasoning: false,
+};
+
+/** Resolve custom IDs without silently replacing them with a built-in model. */
+export function getAnthropicModelInfo(
+	modelId: string,
+	overrides?: ModelInfo,
+): ModelInfo {
+	const preset = Object.hasOwn(anthropicModels, modelId)
+		? anthropicModels[modelId as AnthropicModelId]
+		: anthropicCustomModelInfoDefaults;
+	const info: ModelInfo = { ...preset };
+	if (overrides) {
+		for (const [key, value] of Object.entries(overrides)) {
+			if (value !== undefined) {
+				Object.assign(info, { [key]: value });
+			}
+		}
+	}
+	for (const key of ["contextWindow", "maxTokens"] as const) {
+		const value = info[key];
+		if (value === undefined || !Number.isSafeInteger(value) || value <= 0) {
+			info[key] = preset[key];
+		}
+	}
+	return info;
+}
 
 // Claude Code
 export type ClaudeCodeModelId = keyof typeof claudeCodeModels

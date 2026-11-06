@@ -110,6 +110,7 @@ message OpenRouterModelInfo {
   optional double temperature = 14;
   optional bool supports_reasoning = 15;
   optional ApiFormat api_format = 16;
+  optional bool supports_tools = 17;
 }
 
 // Shared response message for model information
@@ -135,6 +136,9 @@ message OpenAiModelsRequest {
   Metadata metadata = 1;
   string base_url = 2;
   string api_key = 3;
+  map<string, string> headers = 4;
+  // Empty means OpenAI for compatibility with existing callers.
+  optional string protocol = 5;
 }
 
 // Request for fetching SAP AI Core models
@@ -335,6 +339,8 @@ message ModelsApiOptions {
   optional OpenRouterModelInfo plan_mode_vertex_custom_model_info = 240;
   optional bool act_mode_vertex_custom_model_selected = 241;
   optional OpenRouterModelInfo act_mode_vertex_custom_model_info = 242;
+  optional OpenRouterModelInfo plan_mode_anthropic_model_info = 243;
+  optional OpenRouterModelInfo act_mode_anthropic_model_info = 244;
 }
 
 // Request for updating API configuration (legacy - uses combined configuration)
@@ -499,6 +505,11 @@ message OpenAiCompatibleModelInfo {
   optional double temperature = 13;
   optional bool is_r1_format_required = 14;
   optional ApiFormat api_format = 15;
+  optional bool supports_tools = 16;
+  optional bool supports_streaming = 17;
+  optional bool supports_reasoning_effort = 18;
+  optional string system_role = 19;
+  optional bool supports_reasoning = 20;
 }
 
 // Model info for LiteLLM models
@@ -706,4 +717,6 @@ message ModelsApiConfiguration {
   optional OpenRouterModelInfo plan_mode_vertex_custom_model_info = 245;
   optional bool act_mode_vertex_custom_model_selected = 246;
   optional OpenRouterModelInfo act_mode_vertex_custom_model_info = 247;
+  optional OpenRouterModelInfo plan_mode_anthropic_model_info = 248;
+  optional OpenRouterModelInfo act_mode_anthropic_model_info = 249;
 }

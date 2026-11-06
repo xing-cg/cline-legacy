@@ -25,6 +25,7 @@ import {
 	geminiDefaultModelId,
 	geminiModels,
 	getVertexCustomModelInfo,
+	getAnthropicModelInfo,
 	groqDefaultModelId,
 	groqModels,
 	hicapModelInfoSaneDefaults,
@@ -237,8 +238,11 @@ export function normalizeApiConfiguration(
 	};
 
 	switch (provider) {
-		case "anthropic":
-			return getProviderData(anthropicModels, anthropicDefaultModelId);
+		case "anthropic": {
+			const selectedModelId = modelId?.trim() || anthropicDefaultModelId;
+			const overrides = currentMode === "plan" ? apiConfiguration?.planModeAnthropicModelInfo : apiConfiguration?.actModeAnthropicModelInfo;
+			return { selectedProvider: provider, selectedModelId, selectedModelInfo: getAnthropicModelInfo(selectedModelId, overrides) };
+		}
 		case "claude-code":
 			return getProviderData(claudeCodeModels, claudeCodeDefaultModelId);
 		case "bedrock": {
@@ -710,6 +714,7 @@ export function getModeSpecificFields(
 
 			// Model info objects
 			openAiModelInfo: undefined,
+			anthropicModelInfo: undefined,
 			liteLlmModelInfo: undefined,
 			openRouterModelInfo: undefined,
 			clineModelInfo: undefined,
@@ -846,6 +851,7 @@ export function getModeSpecificFields(
 				: apiConfiguration.actModeVercelAiGatewayModelId,
 
 		// Model info objects
+		anthropicModelInfo: mode === "plan" ? apiConfiguration.planModeAnthropicModelInfo : apiConfiguration.actModeAnthropicModelInfo,
 		openAiModelInfo:
 			mode === "plan"
 				? apiConfiguration.planModeOpenAiModelInfo
@@ -966,6 +972,12 @@ export async function syncModeConfigurations(
 
 	// Handle provider-specific fields
 	switch (apiProvider) {
+		case "anthropic":
+			updates.planModeApiModelId = sourceFields.apiModelId;
+			updates.actModeApiModelId = sourceFields.apiModelId;
+			updates.planModeAnthropicModelInfo = sourceFields.anthropicModelInfo;
+			updates.actModeAnthropicModelInfo = sourceFields.anthropicModelInfo;
+			break;
 		case "openrouter":
 			updates.planModeOpenRouterModelId = sourceFields.openRouterModelId;
 			updates.actModeOpenRouterModelId = sourceFields.openRouterModelId;
@@ -1133,7 +1145,6 @@ export async function syncModeConfigurations(
 			break;
 
 		// Providers that use apiProvider + apiModelId fields
-		case "anthropic":
 		case "claude-code":
 		case "gemini":
 		case "openai-native":

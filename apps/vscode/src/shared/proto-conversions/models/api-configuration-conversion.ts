@@ -56,6 +56,7 @@ function convertModelInfoToProtoOpenRouter(info: ModelInfo | undefined): OpenRou
 		supportsImages: info.supportsImages,
 		supportsPromptCache: info.supportsPromptCache ?? false,
 		supportsReasoning: info.supportsReasoning,
+		supportsTools: info.supportsTools,
 		inputPrice: info.inputPrice,
 		outputPrice: info.outputPrice,
 		cacheWritesPrice: info.cacheWritesPrice,
@@ -79,6 +80,7 @@ function convertProtoToModelInfo(info: OpenRouterModelInfo | undefined): ModelIn
 		supportsImages: info.supportsImages,
 		supportsPromptCache: info.supportsPromptCache,
 		supportsReasoning: info.supportsReasoning,
+		supportsTools: info.supportsTools,
 		inputPrice: info.inputPrice,
 		outputPrice: info.outputPrice,
 		cacheWritesPrice: info.cacheWritesPrice,
@@ -214,6 +216,12 @@ function convertOpenAiCompatibleModelInfoToProto(
 		tiers: info.tiers || [],
 		temperature: info.temperature,
 		isR1FormatRequired: info.isR1FormatRequired,
+		supportsTools: info.supportsTools,
+		supportsStreaming: info.supportsStreaming,
+		supportsReasoning: info.supportsReasoning,
+		supportsReasoningEffort: info.supportsReasoningEffort,
+		systemRole: info.systemRole === "system" || info.systemRole === "developer" ? info.systemRole : undefined,
+		apiFormat: info.apiFormat,
 	}
 }
 
@@ -240,6 +248,12 @@ function convertProtoToOpenAiCompatibleModelInfo(
 		tiers: info.tiers.length > 0 ? info.tiers : undefined,
 		temperature: info.temperature,
 		isR1FormatRequired: info.isR1FormatRequired,
+		supportsTools: info.supportsTools,
+		supportsStreaming: info.supportsStreaming,
+		supportsReasoning: info.supportsReasoning,
+		supportsReasoningEffort: info.supportsReasoningEffort,
+		systemRole: info.systemRole === "system" || info.systemRole === "developer" ? info.systemRole : undefined,
+		apiFormat: info.apiFormat,
 	}
 }
 
@@ -524,6 +538,7 @@ export function convertApiConfigurationToProto(config: ApiConfiguration): ProtoA
 		// Plan mode configurations
 		planModeApiProvider: config.planModeApiProvider ? convertApiProviderToProto(config.planModeApiProvider) : undefined,
 		planModeApiModelId: config.planModeApiModelId,
+		planModeAnthropicModelInfo: convertModelInfoToProtoOpenRouter(config.planModeAnthropicModelInfo),
 		planModeThinkingBudgetTokens: config.planModeThinkingBudgetTokens,
 		geminiPlanModeThinkingLevel: config.geminiPlanModeThinkingLevel,
 		planModeReasoningEffort: config.planModeReasoningEffort,
@@ -572,6 +587,7 @@ export function convertApiConfigurationToProto(config: ApiConfiguration): ProtoA
 		// Act mode configurations
 		actModeApiProvider: config.actModeApiProvider ? convertApiProviderToProto(config.actModeApiProvider) : undefined,
 		actModeApiModelId: config.actModeApiModelId,
+		actModeAnthropicModelInfo: convertModelInfoToProtoOpenRouter(config.actModeAnthropicModelInfo),
 		actModeThinkingBudgetTokens: config.actModeThinkingBudgetTokens,
 		geminiActModeThinkingLevel: config.geminiActModeThinkingLevel,
 		actModeReasoningEffort: config.actModeReasoningEffort,
@@ -715,6 +731,7 @@ export function convertProtoToApiConfiguration(protoConfig: ProtoApiConfiguratio
 				? convertProtoToApiProvider(protoConfig.planModeApiProvider)
 				: undefined,
 		planModeApiModelId: protoConfig.planModeApiModelId,
+		planModeAnthropicModelInfo: convertProtoToModelInfo(protoConfig.planModeAnthropicModelInfo),
 		planModeThinkingBudgetTokens: protoConfig.planModeThinkingBudgetTokens,
 		geminiPlanModeThinkingLevel: protoConfig.geminiPlanModeThinkingLevel,
 		planModeReasoningEffort: protoConfig.planModeReasoningEffort as OpenaiReasoningEffort | undefined,
@@ -764,6 +781,7 @@ export function convertProtoToApiConfiguration(protoConfig: ProtoApiConfiguratio
 		actModeApiProvider:
 			protoConfig.actModeApiProvider !== undefined ? convertProtoToApiProvider(protoConfig.actModeApiProvider) : undefined,
 		actModeApiModelId: protoConfig.actModeApiModelId,
+		actModeAnthropicModelInfo: convertProtoToModelInfo(protoConfig.actModeAnthropicModelInfo),
 		actModeThinkingBudgetTokens: protoConfig.actModeThinkingBudgetTokens,
 		geminiActModeThinkingLevel: protoConfig.geminiActModeThinkingLevel,
 		actModeReasoningEffort: protoConfig.actModeReasoningEffort as OpenaiReasoningEffort | undefined,
