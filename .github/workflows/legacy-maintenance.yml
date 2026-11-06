@@ -1,0 +1,61 @@
+name: legacy-maintenance
+
+on:
+  push:
+    branches: ["legacy/4.0.12-intranet"]
+  pull_request:
+    branches: ["legacy/4.0.12-intranet"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: apps/vscode
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            apps/vscode/package-lock.json
+            apps/vscode/webview-ui/package-lock.json
+      - run: npm ci
+      - run: npm --prefix webview-ui ci
+      - run: npm run check-types
+      - run: npm run lint
+      - name: Legacy behavior regression tests
+        env:
+          TS_NODE_PROJECT: tsconfig.unit-test.json
+        run: >-
+          npx mocha --no-config -r ts-node/register -r tsconfig-paths/register -r ./src/test/requires.ts
+          src/core/api/providers/__tests__/legacy-compatibility.test.ts
+          src/core/api/providers/__tests__/anthropic.test.ts
+          src/utils/__tests__/model-utils.test.ts
+          src/services/models/__tests__/discovery.test.ts
+          src/hosts/vscode/legacy/__tests__/connection-profiles.test.ts
+      - name: Model settings UI tests
+        run: >-
+          npm --prefix webview-ui run test --
+          src/components/settings/common/ModelDiscovery.test.tsx
+          src/components/settings/utils/__tests__/anthropic-custom.test.ts
+          src/components/settings/providers/AnthropicProvider.test.tsx
+          src/components/settings/__tests__/LegacyConnectionPanel.spec.ts
+      - run: npm run build:webview
+      - run: node esbuild.mjs --production
+      - name: VS Code 1.95.3 activation smoke test
+        run: xvfb-run -a node scripts/test-legacy-smoke.mjs
+      - run: node scripts/package-legacy.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cline-4.0.12-intranet-${{ github.sha }}
+          path: |
+            apps/vscode/dist/cline-4.0.12-intranet.vsix
+            apps/vscode/dist/cline-4.0.12-intranet.vsix.sha256
+          if-no-files-found: error
