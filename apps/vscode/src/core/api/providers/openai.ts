@@ -1,23 +1,16 @@
 import { DefaultAzureCredential, getBearerTokenProvider } from "@azure/identity"
-import {
-	azureOpenAiDefaultApiVersion,
-	type ModelInfo,
-	type OpenAiCompatibleModelInfo,
-	openAiModelInfoSaneDefaults,
-} from "@shared/api"
+import { azureOpenAiDefaultApiVersion, ModelInfo, OpenAiCompatibleModelInfo, openAiModelInfoSaneDefaults } from "@shared/api"
 import { normalizeOpenaiReasoningEffort } from "@shared/storage/types"
-import type OpenAI from "openai"
-import { AzureOpenAI } from "openai"
+import OpenAI, { AzureOpenAI } from "openai"
 import type { ChatCompletionReasoningEffort, ChatCompletionTool } from "openai/resources/chat/completions"
 import { buildExternalBasicHeaders } from "@/services/EnvUtils"
-import type { ClineStorageMessage } from "@/shared/messages/content"
+import { ClineStorageMessage } from "@/shared/messages/content"
 import { createOpenAIClient, fetch } from "@/shared/net"
-import type { ApiHandler, CommonApiHandlerOptions } from "../index"
+import { ApiHandler, CommonApiHandlerOptions } from "../index"
 import { withRetry } from "../retry"
-import { getOpenAiCompatibleCacheUsage } from "../transform/openai-compatible-usage"
 import { convertToOpenAiMessages } from "../transform/openai-format"
 import { convertToR1Format } from "../transform/r1-format"
-import type { ApiStream } from "../transform/stream"
+import { ApiStream } from "../transform/stream"
 import { getOpenAIToolParams, ToolCallProcessor } from "../transform/tool-call-processor"
 
 interface OpenAiHandlerOptions extends CommonApiHandlerOptions {
@@ -180,16 +173,13 @@ export class OpenAiHandler implements ApiHandler {
 		}
 
 		if (latestUsage) {
-			const cacheUsage = getOpenAiCompatibleCacheUsage(latestUsage)
 			yield {
 				type: "usage",
-				// Chat prompt_tokens includes cached input; ApiStream reports those buckets separately.
-				inputTokens: Math.max(
-					0,
-					(latestUsage.prompt_tokens || 0) - cacheUsage.cacheReadTokens - cacheUsage.cacheWriteTokens,
-				),
+				inputTokens: latestUsage.prompt_tokens || 0,
 				outputTokens: latestUsage.completion_tokens || 0,
-				...cacheUsage,
+				cacheReadTokens: latestUsage.prompt_tokens_details?.cached_tokens || 0,
+				// @ts-expect-error-next-line
+				cacheWriteTokens: latestUsage.prompt_cache_miss_tokens || 0,
 			}
 		}
 	}
